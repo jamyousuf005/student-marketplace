@@ -102,10 +102,10 @@ export async function signup(formData: FormData) {
           companyName: 'New Company', // Placeholder
         })
       }
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error('Failed to save user to DB:', dbError)
-      // Note: Ideally, you'd want to handle this rollback in a real production system
-      return { error: 'Account created but failed to initialize profile. Please contact support.' }
+      // Return the actual error message to help debug
+      return { error: `DB Error: ${dbError?.message || JSON.stringify(dbError) || 'Unknown error'}` }
     }
   }
 
