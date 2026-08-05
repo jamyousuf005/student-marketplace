@@ -210,7 +210,7 @@ export function LoginForm() {
       className="w-full max-w-md"
     >
       <Card className="shadow-2xl border-border/60 bg-card/80 backdrop-blur-xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-emerald-400" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-purple-500" />
         
         <Tabs defaultValue="login" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="pb-4">
