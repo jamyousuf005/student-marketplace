@@ -22,6 +22,13 @@
       "when": 1785348314895,
       "tag": "0002_sleepy_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785864718878,
+      "tag": "0003_married_catseye",
+      "breakpoints": true
     }
   ]
 }

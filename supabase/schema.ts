@@ -16,7 +16,7 @@ export const users = pgTable("users", {
 
 export const studentProfiles = pgTable("student_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   bio: text("bio"),
@@ -30,7 +30,7 @@ export const studentProfiles = pgTable("student_profiles", {
 
 export const enterpriseProfiles = pgTable("enterprise_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   companyName: text("company_name").notNull(),
   description: text("description"),
   website: text("website"),
@@ -41,7 +41,7 @@ export const enterpriseProfiles = pgTable("enterprise_profiles", {
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  enterpriseId: uuid("enterprise_id").references(() => enterpriseProfiles.id).notNull(),
+  enterpriseId: uuid("enterprise_id").references(() => enterpriseProfiles.id, { onDelete: "cascade" }).notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
   budget: integer("budget").notNull(),
@@ -55,8 +55,8 @@ export const tasks = pgTable("tasks", {
 
 export const applications = pgTable("applications", {
   id: uuid("id").primaryKey().defaultRandom(),
-  taskId: uuid("task_id").references(() => tasks.id).notNull(),
-  studentId: uuid("student_id").references(() => studentProfiles.id).notNull(),
+  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }).notNull(),
+  studentId: uuid("student_id").references(() => studentProfiles.id, { onDelete: "cascade" }).notNull(),
   coverLetter: text("cover_letter").notNull(),
   status: applicationStatusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -65,7 +65,7 @@ export const applications = pgTable("applications", {
 
 export const contracts = pgTable("contracts", {
   id: uuid("id").primaryKey().defaultRandom(),
-  applicationId: uuid("application_id").references(() => applications.id).notNull(),
+  applicationId: uuid("application_id").references(() => applications.id, { onDelete: "cascade" }).notNull(),
   pdfUrl: text("pdf_url"),
   signedByEnterprise: boolean("signed_by_enterprise").default(false),
   signedByStudent: boolean("signed_by_student").default(false),
@@ -74,7 +74,7 @@ export const contracts = pgTable("contracts", {
 
 export const milestones = pgTable("milestones", {
   id: uuid("id").primaryKey().defaultRandom(),
-  contractId: uuid("contract_id").references(() => contracts.id).notNull(),
+  contractId: uuid("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
   amount: integer("amount").notNull(),
@@ -85,9 +85,9 @@ export const milestones = pgTable("milestones", {
 
 export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
-  senderId: uuid("sender_id").references(() => users.id).notNull(),
-  receiverId: uuid("receiver_id").references(() => users.id).notNull(),
-  taskId: uuid("task_id").references(() => tasks.id),
+  senderId: uuid("sender_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  receiverId: uuid("receiver_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   read: boolean("read").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -95,9 +95,9 @@ export const messages = pgTable("messages", {
 
 export const reviews = pgTable("reviews", {
   id: uuid("id").primaryKey().defaultRandom(),
-  taskId: uuid("task_id").references(() => tasks.id).notNull(),
-  reviewerId: uuid("reviewer_id").references(() => users.id).notNull(),
-  revieweeId: uuid("reviewee_id").references(() => users.id).notNull(),
+  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }).notNull(),
+  reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  revieweeId: uuid("reviewee_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   rating: integer("rating").notNull(),
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -105,7 +105,7 @@ export const reviews = pgTable("reviews", {
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   read: boolean("read").default(false),

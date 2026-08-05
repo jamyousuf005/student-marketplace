@@ -33,21 +33,31 @@ export async function updateSession(request: NextRequest) {
 
   const url = request.nextUrl.clone()
 
-  // Define protected routes mapping
-  const authRoutes = ['/login', '/signup']
-  const isAuthRoute = authRoutes.some((route) => url.pathname.startsWith(route))
+  // Define public/auth routes
+  const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')
+  const isAuthCallback = url.pathname.startsWith('/auth')
+  const isHomePage = url.pathname === '/'
 
-  if (!user && !isAuthRoute && url.pathname !== '/') {
+  // If user is not authenticated and trying to access a protected route
+  if (!user && !isAuthPage && !isAuthCallback && !isHomePage) {
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthRoute) {
+  // If user IS authenticated and trying to access login/signup
+  if (user && isAuthPage) {
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // TODO: Add RBAC checks (Admin, Student, Enterprise)
+  // RBAC checks for admin dashboard
+  if (user && url.pathname.startsWith('/dashboard/admin')) {
+    const role = user.user_metadata?.role || user.app_metadata?.role
+    if (role && role !== 'admin') {
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+  }
 
   return supabaseResponse
 }

@@ -109,6 +109,32 @@ export async function signup(formData: FormData) {
     }
   }
 
+  // If email confirmation is required, don't auto-login
+  if (data.user && !data.user.email_confirmed_at) {
+    return { success: true, needsVerification: true }
+  }
+
+  return { success: true }
+}
+
+export async function verifyOtp(email: string, token: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'signup',
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  if (data.user) {
+    // Update db to set emailVerified to true
+    await db.update(users).set({ emailVerified: true }).where(eq(users.id, data.user.id))
+  }
+
   return { success: true }
 }
 

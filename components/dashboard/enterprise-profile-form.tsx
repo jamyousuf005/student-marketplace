@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Image as ImageIcon } from 'lucide-react'
 
 export function EnterpriseProfileForm({ initialData }: { initialData: any }) {
   const [isLoading, setIsLoading] = useState(false)
@@ -41,6 +41,18 @@ export function EnterpriseProfileForm({ initialData }: { initialData: any }) {
           <div className="space-y-2">
             <Label htmlFor="website">Website</Label>
             <Input id="website" name="website" type="url" defaultValue={initialData?.website || ''} placeholder="https://example.com" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="logo" className="flex items-center gap-1">
+              <ImageIcon className="h-4 w-4" /> Company Logo
+            </Label>
+            <Input id="logo" name="logo" type="file" accept="image/*" />
+            {initialData?.logoUrl && (
+              <p className="text-xs text-muted-foreground truncate">
+                Current Logo: <a href={initialData.logoUrl} target="_blank" rel="noreferrer" className="underline">View Logo</a>
+              </p>
+            )}
           </div>
           
           <div className="space-y-2">

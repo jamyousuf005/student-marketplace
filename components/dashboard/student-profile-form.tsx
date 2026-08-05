@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileText, User } from 'lucide-react'
 
 export function StudentProfileForm({ initialData }: { initialData: any }) {
   const [isLoading, setIsLoading] = useState(false)
@@ -70,7 +70,33 @@ export function StudentProfileForm({ initialData }: { initialData: any }) {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="avatar" className="flex items-center gap-1">
+                <User className="h-4 w-4" /> Avatar Image
+              </Label>
+              <Input id="avatar" name="avatar" type="file" accept="image/*" />
+              {initialData?.avatarUrl && (
+                <p className="text-xs text-muted-foreground truncate">
+                  Current: <a href={initialData.avatarUrl} target="_blank" rel="noreferrer" className="underline">View Avatar</a>
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="resume" className="flex items-center gap-1">
+                <FileText className="h-4 w-4" /> Resume PDF
+              </Label>
+              <Input id="resume" name="resume" type="file" accept=".pdf" />
+              {initialData?.resumeUrl && (
+                <p className="text-xs text-muted-foreground truncate">
+                  Current: <a href={initialData.resumeUrl} target="_blank" rel="noreferrer" className="underline">View Resume</a>
+                </p>
+              )}
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full mt-4" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Profile
           </Button>

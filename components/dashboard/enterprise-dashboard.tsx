@@ -42,6 +42,8 @@ export default async function EnterpriseDashboard() {
       studentBio: studentProfiles.bio,
       studentEducation: studentProfiles.education,
       studentSkills: studentProfiles.skills,
+      studentResumeUrl: studentProfiles.resumeUrl,
+      studentUserId: studentProfiles.userId,
     })
     .from(applications)
     .innerJoin(tasks, eq(applications.taskId, tasks.id))
@@ -51,6 +53,7 @@ export default async function EnterpriseDashboard() {
     
     incomingApplications = rawApplications
   }
+
 
   return (
     <div className="space-y-8">
