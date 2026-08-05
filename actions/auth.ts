@@ -104,7 +104,14 @@ export async function signup(formData: FormData) {
       }
     } catch (dbError: any) {
       console.error('Failed to save user to DB:', dbError)
-      // Return the actual error message to help debug
+      
+      // Check if it's a Postgres unique constraint violation (duplicate email)
+      const errorStr = String(dbError?.message || dbError?.code || '')
+      if (errorStr.includes('23505') || errorStr.includes('duplicate key value')) {
+        return { error: 'This email is already registered. Please sign in instead.' }
+      }
+      
+      // Return the actual error message to help debug other DB issues
       return { error: `DB Error: ${dbError?.message || JSON.stringify(dbError) || 'Unknown error'}` }
     }
   }
