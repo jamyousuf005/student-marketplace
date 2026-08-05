@@ -138,6 +138,145 @@ export async function verifyOtp(email: string, token: string) {
   return { success: true }
 }
 
+export async function requestPasswordReset(email: string) {
+  try {
+    const parsed = z.string().email().safeParse(email)
+
+    if (!parsed.success) {
+      return { error: 'Please enter a valid email address' }
+    }
+
+    const supabase = await createClient()
+
+    // Use signInWithOtp to send a short numeric OTP the user can type manually.
+    // shouldCreateUser: false ensures this only works for existing accounts.
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+      },
+    })
+
+    if (error) {
+      const msg = error.message || 'Failed to send verification code. Please try again.'
+      return { error: msg }
+    }
+
+    return {
+      success: true,
+      message: 'Verification code sent successfully.',
+    }
+  } catch (err: any) {
+    console.error(err)
+    return {
+      error: err.message || 'Failed to send verification code.',
+    }
+  }
+}
+
+export async function verifyResetOtp(
+  email: string,
+  token: string
+) {
+  try {
+    const emailValidation = z.string().email().safeParse(email)
+
+    if (!emailValidation.success) {
+      return {
+        error: 'Invalid email address.',
+      }
+    }
+
+    if (!token || token.trim().length < 4) {
+      return {
+        error: 'Please enter the full verification code.',
+      }
+    }
+
+    const supabase = await createClient()
+
+    // type: 'email' matches the signInWithOtp flow used in requestPasswordReset
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    })
+
+    if (error) {
+      return {
+        error: error.message,
+      }
+    }
+
+    if (!data.session) {
+      return {
+        error: 'Unable to verify code. Please request a new one.',
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Verification successful.',
+    }
+  } catch (err: any) {
+    console.error(err)
+
+    return {
+      error: err.message || 'OTP verification failed.',
+    }
+  }
+}
+
+export async function resetPassword(password: string) {
+  try {
+    const parsed = z
+      .string()
+      .min(8, 'Password must be at least 8 characters long.')
+      .safeParse(password)
+
+    if (!parsed.success) {
+      return {
+        error: parsed.error.issues[0].message,
+      }
+    }
+
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return {
+        error: 'Your recovery session has expired. Please request a new verification code.',
+      }
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    })
+
+    if (error) {
+      return {
+        error: error.message,
+      }
+    }
+
+    await supabase.auth.signOut()
+
+    return {
+      success: true,
+      message: 'Password updated successfully.',
+    }
+  } catch (err: any) {
+    console.error(err)
+
+    return {
+      error: err.message || 'Unable to update password.',
+    }
+  }
+}
+
 export async function signout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
