@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
+import { motion, AnimatePresence } from 'framer-motion'
 import { login, signup, verifyOtp } from '@/actions/auth'
 import { createClient } from '@/supabase/client'
 import { IconBrandGoogle } from '@tabler/icons-react'
@@ -21,9 +22,20 @@ import {
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { 
+  Loader2, 
+  GraduationCap, 
+  Building2, 
+  Check, 
+  Eye, 
+  EyeOff, 
+  Sparkles, 
+  ArrowRight,
+  ShieldCheck,
+  Lock,
+  Mail
+} from 'lucide-react'
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -36,6 +48,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('login')
+  const [showPassword, setShowPassword] = useState(false)
   const supabase = createClient()
 
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null)
@@ -45,7 +58,7 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: 'dummy@example.com',
+      email: '',
       password: '',
       role: 'student',
     },
@@ -71,10 +84,7 @@ export function LoginForm() {
     
     try {
       const result = isSignUp ? await signup(formData) : await login(formData)
-      
-      // Typescript complains about needsVerification not existing if we don't handle it carefully
-      // but it exists on the signup response
-      const hasNeedsVerification = result && 'needsVerification' in result && result.needsVerification;
+      const hasNeedsVerification = result && 'needsVerification' in result && result.needsVerification
       
       if (hasNeedsVerification) {
         toast.success('Verification code sent to your email!')
@@ -96,7 +106,6 @@ export function LoginForm() {
   async function handleGoogleLogin() {
     setIsGoogleLoading(true)
     
-    // Store role choice if on signup tab, so the callback can properly register them
     if (activeTab === 'signup') {
       const role = form.getValues('role') || 'student'
       document.cookie = `oauth_role=${role}; path=/; max-age=3600; SameSite=Lax`
@@ -141,172 +150,249 @@ export function LoginForm() {
 
   if (verificationEmail) {
     return (
-      <Card className="w-[400px] shadow-lg border-muted">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Verify Email</CardTitle>
-          <CardDescription className="text-center">
-            We sent a 6-digit verification code to <br/>
-            <span className="font-semibold text-foreground">{verificationEmail}</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="space-y-2">
-              <Input
-                type="text"
-                placeholder="123456"
-                maxLength={6}
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                className="text-center text-lg tracking-widest"
-              />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md"
+      >
+        <Card className="shadow-2xl border-primary/20 bg-card/80 backdrop-blur-xl">
+          <CardHeader className="text-center space-y-2">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2">
+              <ShieldCheck className="h-6 w-6" />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isVerifying || otpCode.length !== 6}
-            >
-              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify Code
-            </Button>
-            <Button 
-              type="button"
-              variant="ghost" 
-              className="w-full"
-              onClick={() => setVerificationEmail(null)}
-              disabled={isVerifying}
-            >
-              Back to login
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <CardTitle className="text-2xl font-black">Verify Your Email</CardTitle>
+            <CardDescription className="text-sm">
+              We sent a 6-digit verification code to <br/>
+              <span className="font-bold text-foreground">{verificationEmail}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="123456"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  className="text-center text-2xl tracking-[0.5em] font-mono h-12 bg-background/80"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-11 text-base font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                disabled={isVerifying || otpCode.length !== 6}
+              >
+                {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                Verify Code
+              </Button>
+              <Button 
+                type="button"
+                variant="ghost" 
+                className="w-full text-xs text-muted-foreground"
+                onClick={() => setVerificationEmail(null)}
+                disabled={isVerifying}
+              >
+                Back to login
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
     )
   }
 
   return (
-    <Card className="w-[400px] shadow-lg border-muted">
-      <Tabs defaultValue="login" className="w-full" onValueChange={setActiveTab}>
-        <CardHeader>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-          <CardTitle className="text-2xl text-center">
-            {activeTab === 'login' ? 'Welcome back' : 'Create an account'}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {activeTab === 'login' 
-              ? 'Enter your credentials to access your account' 
-              : 'Sign up to start collaborating on the marketplace'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="name@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="w-full max-w-md"
+    >
+      <Card className="shadow-2xl border-border/60 bg-card/80 backdrop-blur-xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-emerald-400" />
+        
+        <Tabs defaultValue="login" className="w-full" onValueChange={setActiveTab}>
+          <CardHeader className="pb-4">
+            <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/60 mb-3">
+              <TabsTrigger value="login" className="text-xs sm:text-sm font-semibold">
+                Sign In
+              </TabsTrigger>
+              <TabsTrigger value="signup" className="text-xs sm:text-sm font-semibold">
+                Create Account
+              </TabsTrigger>
+            </TabsList>
+            
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: activeTab === 'login' ? -10 : 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: activeTab === 'login' ? 10 : -10 }}
+                transition={{ duration: 0.2 }}
+                className="text-center"
+              >
+                <CardTitle className="text-2xl font-extrabold tracking-tight">
+                  {activeTab === 'login' ? 'Welcome Back' : 'Join Marketplace'}
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm mt-1">
+                  {activeTab === 'login' 
+                    ? 'Enter your credentials to access your dashboard' 
+                    : 'Connect university talent with enterprise projects'}
+                </CardDescription>
+              </motion.div>
+            </AnimatePresence>
+          </CardHeader>
 
-              {activeTab === 'signup' && (
+          <CardContent className="space-y-4">
+            <Form {...form}>
+              <form className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="role"
+                  name="email"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Account Type</FormLabel>
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">Email Address</FormLabel>
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="student" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Student - I want to find tasks
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="enterprise" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Enterprise - I want to post tasks
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input placeholder="user@example.com" className="pl-9 h-11 bg-background/80" {...field} />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type={showPassword ? 'text' : 'password'} 
+                            placeholder="••••••••" 
+                            className="pl-9 pr-10 h-11 bg-background/80" 
+                            {...field} 
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Animated Role Cards for Signup */}
+                {activeTab === 'signup' && (
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2 pt-1">
+                        <FormLabel className="text-xs font-semibold">Select Account Role</FormLabel>
+                        <FormControl>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Student Role Selection Card */}
+                            <div
+                              onClick={() => field.onChange('student')}
+                              className={`cursor-pointer p-3 rounded-xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ${
+                                field.value === 'student'
+                                  ? 'border-primary bg-primary/10 shadow-md'
+                                  : 'border-border/60 hover:border-primary/40 bg-background/50'
+                              }`}
+                            >
+                              <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                                field.value === 'student' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                              }`}>
+                                <GraduationCap className="h-5 w-5" />
+                              </div>
+                              <span className="text-xs font-bold">Student</span>
+                              <span className="text-[10px] text-muted-foreground">Find tasks & build portfolio</span>
+                            </div>
+
+                            {/* Enterprise Role Selection Card */}
+                            <div
+                              onClick={() => field.onChange('enterprise')}
+                              className={`cursor-pointer p-3 rounded-xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ${
+                                field.value === 'enterprise'
+                                  ? 'border-primary bg-primary/10 shadow-md'
+                                  : 'border-border/60 hover:border-primary/40 bg-background/50'
+                              }`}
+                            >
+                              <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                                field.value === 'enterprise' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                              }`}>
+                                <Building2 className="h-5 w-5" />
+                              </div>
+                              <span className="text-xs font-bold">Enterprise</span>
+                              <span className="text-[10px] text-muted-foreground">Post tasks & hire talent</span>
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </form>
+            </Form>
+          </CardContent>
+
+          <CardFooter className="flex flex-col gap-3 pt-2">
+            <Button 
+              className="w-full h-11 text-base font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 transition-transform active:scale-[0.99]" 
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  {activeTab === 'login' ? 'Sign In to Dashboard' : 'Create Your Account'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               )}
-            </form>
-          </Form>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button 
-            className="w-full" 
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={isLoading || isGoogleLoading}
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {activeTab === 'login' ? 'Sign In' : 'Create Account'}
-          </Button>
+            </Button>
 
-          <div className="relative w-full">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+            <div className="relative w-full my-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold">
+                <span className="bg-card px-3 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
 
-          <Button 
-            variant="outline" 
-            type="button"
-            className="w-full flex items-center justify-center gap-2 bg-background hover:bg-accent text-foreground transition-all duration-300"
-            onClick={handleGoogleLogin}
-            disabled={isLoading || isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <IconBrandGoogle className="h-4 w-4" />
-            )}
-            Google
-          </Button>
-        </CardFooter>
-      </Tabs>
-    </Card>
+            <Button 
+              variant="outline" 
+              type="button"
+              className="w-full h-10 flex items-center justify-center gap-2.5 bg-background hover:bg-muted font-semibold text-xs border-border/80"
+              onClick={handleGoogleLogin}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <IconBrandGoogle className="h-4 w-4 text-rose-500" />
+              )}
+              <span>Continue with Google</span>
+            </Button>
+          </CardFooter>
+        </Tabs>
+      </Card>
+    </motion.div>
   )
 }

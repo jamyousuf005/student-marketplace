@@ -8,7 +8,7 @@ import { eq, desc, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { uploadFileToStorage } from '@/lib/storage'
 import { generateContractHtml } from '@/lib/pdf/contract-generator'
-
+import { createNotification } from '@/services/notification-service'
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -29,17 +29,17 @@ export async function createTask(formData: FormData) {
 
   if (!enterprise) return { error: 'Not authorized: Enterprise account required' }
 
-  const title = formData.get('title') as string
-  const description = formData.get('description') as string
+  const title = (formData.get('title') as string) || ''
+  const description = (formData.get('description') as string) || ''
   const rawBudget = formData.get('budget') as string
   const budget = parseInt(rawBudget, 10)
-  const category = formData.get('category') as string
+  const category = (formData.get('category') as string) || ''
   const rawSkills = (formData.get('skills') as string) || ''
   const skills = rawSkills.split(',').map(s => s.trim()).filter(Boolean)
 
   const validation = taskSchema.safeParse({ title, description, budget, category, skills })
   if (!validation.success) {
-    return { error: validation.error.errors[0].message }
+    return { error: validation.error.issues[0].message }
   }
 
   try {
@@ -54,8 +54,9 @@ export async function createTask(formData: FormData) {
 
     revalidatePath('/dashboard')
     return { success: true }
-  } catch (err) {
-    return { error: 'Failed to create task' }
+  } catch (err: any) {
+    console.error('Error creating task:', err)
+    return { error: err?.message || 'Failed to create task' }
   }
 }
 
@@ -68,7 +69,7 @@ export async function submitApplicationForm(formData: FormData) {
   const coverLetter = formData.get('coverLetter') as string
   const experience = formData.get('experience') as string
   const rawSkills = formData.get('skills') as string
-  const resumeFile = formData.get('resume') as File | null
+  const resumeFile = formData.get('resume')
 
   if (!taskId) return { error: 'Task ID missing' }
   if (!coverLetter || coverLetter.trim().length < 10) {
@@ -105,12 +106,13 @@ export async function submitApplicationForm(formData: FormData) {
   try {
     let resumeUrl = student.resumeUrl
 
-    if (resumeFile && resumeFile.size > 0) {
-      const extension = resumeFile.name.split('.').pop() || 'pdf'
+    if (resumeFile && typeof resumeFile === 'object' && 'size' in resumeFile && (resumeFile as File).size > 0) {
+      const file = resumeFile as File
+      const extension = file.name.split('.').pop() || 'pdf'
       const filePath = `student_${user.id}_resume_${Date.now()}.${extension}`
-      const arrayBuffer = await resumeFile.arrayBuffer()
+      const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      resumeUrl = await uploadFileToStorage('resumes', filePath, buffer, resumeFile.type)
+      resumeUrl = await uploadFileToStorage('resumes', filePath, buffer, file.type)
     }
 
     // Optionally update student profile skills/education
@@ -129,6 +131,19 @@ export async function submitApplicationForm(formData: FormData) {
       coverLetter: coverLetter.trim(),
     })
 
+    // Notify enterprise
+    const enterprise = await db.query.enterpriseProfiles.findFirst({
+      where: eq(enterpriseProfiles.id, targetTask.enterpriseId)
+    })
+    if (enterprise) {
+      await createNotification({
+        userId: enterprise.userId,
+        title: 'New Application Received',
+        content: `A student has applied for your task: "${targetTask.title}"`,
+        link: '/dashboard',
+      })
+    }
+
     revalidatePath(`/dashboard/tasks/${taskId}`)
     revalidatePath('/dashboard/tasks')
     revalidatePath('/dashboard')
@@ -145,7 +160,6 @@ export async function applyToTask(taskId: string, coverLetter: string) {
   formData.append('coverLetter', coverLetter)
   return await submitApplicationForm(formData)
 }
-
 
 export async function getRecentTasks() {
   return await db.query.tasks.findMany({
@@ -197,7 +211,6 @@ export async function acceptApplication(applicationId: string) {
     })
 
     if (!existingContract) {
-      // Fetch details for contract generation
       const student = await db.query.studentProfiles.findFirst({
         where: eq(studentProfiles.id, app.studentId)
       })
@@ -229,18 +242,25 @@ export async function acceptApplication(applicationId: string) {
         } catch (storageErr) {
           console.error('Failed to upload contract document:', storageErr)
         }
+
+        // Notify student
+        await createNotification({
+          userId: student.userId,
+          title: 'Application Accepted!',
+          content: `Your application for "${task.title}" has been accepted. Contract generated.`,
+          link: '/dashboard/contracts',
+        })
       }
     }
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/contracts')
     return { success: true }
-  } catch (err) {
+  } catch (err: any) {
     console.error(err)
-    return { error: 'Failed to accept application' }
+    return { error: err?.message || 'Failed to accept application' }
   }
 }
-
 
 export async function deleteTask(taskId: string) {
   const supabase = await createClient()
@@ -266,8 +286,8 @@ export async function deleteTask(taskId: string) {
     await db.delete(tasks).where(eq(tasks.id, taskId))
     revalidatePath('/dashboard')
     return { success: true }
-  } catch (err) {
-    return { error: 'Failed to delete task' }
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to delete task' }
   }
 }
 
@@ -291,17 +311,17 @@ export async function updateTask(taskId: string, formData: FormData) {
     return { error: 'Forbidden: You do not own this task' }
   }
 
-  const title = formData.get('title') as string
-  const description = formData.get('description') as string
+  const title = (formData.get('title') as string) || ''
+  const description = (formData.get('description') as string) || ''
   const rawBudget = formData.get('budget') as string
   const budget = parseInt(rawBudget, 10)
-  const category = formData.get('category') as string
+  const category = (formData.get('category') as string) || ''
   const skillsStr = (formData.get('skills') as string) || ''
   const skills = skillsStr.split(',').map(s => s.trim()).filter(Boolean)
 
   const validation = taskSchema.safeParse({ title, description, budget, category, skills })
   if (!validation.success) {
-    return { error: validation.error.errors[0].message }
+    return { error: validation.error.issues[0].message }
   }
 
   try {
@@ -318,7 +338,7 @@ export async function updateTask(taskId: string, formData: FormData) {
     
     revalidatePath('/dashboard')
     return { success: true }
-  } catch (err) {
-    return { error: 'Failed to update task' }
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to update task' }
   }
 }

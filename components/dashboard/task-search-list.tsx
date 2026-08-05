@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -25,6 +27,7 @@ interface TaskSearchListProps {
 }
 
 export function TaskSearchList({ tasks, enterpriseMap, enterpriseUserIdMap, appliedTaskIds }: TaskSearchListProps) {
+  const router = useRouter()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -78,7 +81,7 @@ export function TaskSearchList({ tasks, enterpriseMap, enterpriseUserIdMap, appl
     <div className="space-y-6">
       {/* Shadcn UI Styled Filter Bar */}
       <Card className="border-primary/20 bg-card/50 backdrop-blur shadow-md p-4">
-        <div className="grid gap-4 md:grid-cols-4 items-center">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 items-center">
           {/* Search Input */}
           <div className="relative md:col-span-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -174,13 +177,16 @@ export function TaskSearchList({ tasks, enterpriseMap, enterpriseUserIdMap, appl
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredTasks.map((task) => {
+          {filteredTasks.map((task, idx) => {
             const isApplied = appliedSet.has(task.id)
             const enterpriseUserId = enterpriseUserIdMap ? enterpriseUserIdMap[task.enterpriseId] : undefined
 
             return (
-              <div
+              <motion.div
                 key={task.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: Math.min(idx * 0.05, 0.3) }}
                 onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
                 className="block group cursor-pointer"
               >
@@ -270,7 +276,7 @@ export function TaskSearchList({ tasks, enterpriseMap, enterpriseUserIdMap, appl
                     </Button>
                   </CardFooter>
                 </Card>
-              </div>
+              </motion.div>
             )
           })}
 

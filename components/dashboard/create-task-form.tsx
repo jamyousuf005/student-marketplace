@@ -43,7 +43,7 @@ export function CreateTaskForm() {
             <Input id="description" name="description" required placeholder="Describe the task in detail..." />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="budget">Budget ($)</Label>
               <Input id="budget" name="budget" type="number" min="1" required placeholder="500" />

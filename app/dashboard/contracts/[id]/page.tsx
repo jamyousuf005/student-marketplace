@@ -1,109 +1,96 @@
 import { db } from '@/lib/db'
-import { contracts, milestones, tasks, applications, users, enterpriseProfiles, studentProfiles } from '@/supabase/schema'
-import { eq, and } from 'drizzle-orm'
+import { contracts, milestones, applications, tasks, users, studentProfiles, enterpriseProfiles } from '@/supabase/schema'
+import { eq } from 'drizzle-orm'
 import { createClient } from '@/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { redirect } from 'next/navigation'
-import { ReviewForm } from '@/components/dashboard/review-form'
-import { CompleteTaskButton } from '@/components/dashboard/complete-task-button'
+import { redirect, notFound } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { ArrowLeft, CheckCircle2, Clock, DollarSign, Plus, Flag } from 'lucide-react'
+import Link from 'next/link'
+import { MilestoneList } from '@/components/dashboard/milestone-list'
 
-export default async function ContractMilestonesPage(context: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = await context.params
+interface ContractDetailPageProps {
+  params: Promise<{
+    id: string
+  }>
+}
+
+export default async function ContractDetailPage({ params }: ContractDetailPageProps) {
+  const { id: contractId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
 
-  const contractData = await db.query.contracts.findFirst({
-    where: eq(contracts.id, params.id),
-  })
-
-  if (!contractData) {
-    return <div className="p-8 text-center text-destructive">Contract not found</div>
-  }
-
-  const applicationData = await db.query.applications.findFirst({
-    where: eq(applications.id, contractData.applicationId),
-  })
-
-  if (!applicationData) {
-    return <div className="p-8 text-center text-destructive">Application not found</div>
-  }
-
-  const taskData = await db.query.tasks.findFirst({
-    where: eq(tasks.id, applicationData.taskId),
-  })
-
-  const contractMilestones = await db.query.milestones.findMany({
-    where: eq(milestones.contractId, params.id),
-  })
-
   const dbUser = await db.query.users.findFirst({
     where: eq(users.id, user.id)
   })
+  if (!dbUser) redirect('/login')
 
-  // Reviewee ID logic: if current user is student, reviewee is enterprise user.
-  // Wait, I need the actual user ID of the other party.
-  const enterpriseId = taskData?.enterpriseId;
-  const studentId = applicationData?.studentId;
-
-  // Let's get the enterprise userId and student userId
-  const enterpriseUser = await db.query.enterpriseProfiles.findFirst({
-    where: eq(enterpriseProfiles.id, enterpriseId!)
+  const contract = await db.query.contracts.findFirst({
+    where: eq(contracts.id, contractId)
   })
-  const studentUser = await db.query.studentProfiles.findFirst({
-    where: eq(studentProfiles.id, studentId!)
+  if (!contract) notFound()
+
+  const application = await db.query.applications.findFirst({
+    where: eq(applications.id, contract.applicationId)
+  })
+  if (!application) notFound()
+
+  const task = await db.query.tasks.findFirst({
+    where: eq(tasks.id, application.taskId)
+  })
+  if (!task) notFound()
+
+  const contractMilestones = await db.query.milestones.findMany({
+    where: eq(milestones.contractId, contractId)
   })
 
-  const revieweeId = dbUser?.role === 'student' ? enterpriseUser?.userId : studentUser?.userId;
+  const isEnterprise = dbUser.role === 'enterprise'
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Contract Milestones</h2>
-        <p className="text-muted-foreground">Track deliverables and payments for this contract.</p>
+        <Link href="/dashboard/contracts">
+          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Back to Active Contracts
+          </Button>
+        </Link>
       </div>
 
-      <Card>
+      <Card className="border-primary/20 shadow-md">
         <CardHeader>
-          <CardTitle>Milestone Timeline</CardTitle>
-          <CardDescription>All project deliverables are tracked here.</CardDescription>
+          <div className="flex flex-wrap justify-between items-start gap-4">
+            <div>
+              <Badge variant="outline" className="mb-2 text-xs">
+                Contract #{contract.id.slice(0, 8)}
+              </Badge>
+              <CardTitle className="text-2xl font-bold">{task.title}</CardTitle>
+              <CardDescription>
+                Category: {task.category} • Task Status: <strong className="capitalize">{task.status.replace('_', ' ')}</strong>
+              </CardDescription>
+            </div>
+
+            <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-right">
+              <span className="text-xs text-muted-foreground block font-medium">Total Contract Budget</span>
+              <span className="text-2xl font-bold text-emerald-500 flex items-center justify-end">
+                <DollarSign className="h-5 w-5" />{task.budget.toLocaleString()}
+              </span>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          {contractMilestones.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-              No milestones have been created for this contract yet.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {contractMilestones.map(m => (
-                <div key={m.id} className="p-4 border rounded-lg flex justify-between items-center">
-                  <div>
-                    <h4 className="font-semibold">{m.title}</h4>
-                    <p className="text-sm text-muted-foreground">{m.description}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg">${m.amount}</div>
-                    <div className={`text-xs font-semibold uppercase ${m.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {m.status}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+
+        <CardContent className="space-y-6 border-t pt-6">
+          <MilestoneList
+            contractId={contract.id}
+            milestones={contractMilestones}
+            isEnterprise={isEnterprise}
+          />
         </CardContent>
       </Card>
-      
-      {taskData?.status === 'in_progress' && dbUser?.role === 'enterprise' && (
-        <div className="flex justify-end">
-          <CompleteTaskButton taskId={taskData.id} />
-        </div>
-      )}
-
-      {taskData?.status === 'completed' && revieweeId && (
-        <ReviewForm taskId={taskData.id} revieweeId={revieweeId} />
-      )}
     </div>
   )
 }
