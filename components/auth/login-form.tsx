@@ -167,8 +167,8 @@ export function LoginForm() {
 
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault()
-    if (!otpCode || otpCode.length !== 6) {
-      toast.error('Please enter a valid 6-digit code')
+    if (!otpCode || otpCode.trim().length < 4) {
+      toast.error('Please enter the verification code')
       return
     }
 
@@ -318,11 +318,11 @@ export function LoginForm() {
               <div className="space-y-2">
                 <Input
                   type="text"
-                  placeholder="123456"
-                  maxLength={6}
+                  placeholder="••••••••"
+                  maxLength={8}
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  className="text-center text-2xl tracking-[0.5em] font-mono h-12 bg-background/80"
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  className="text-center text-2xl tracking-[0.4em] font-mono h-12 bg-background/80"
                 />
               </div>
               <Button 
