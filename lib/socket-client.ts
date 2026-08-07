@@ -6,7 +6,7 @@ let socket: Socket | null = null
 
 export function getSocket(): Socket {
   if (!socket) {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:4000'
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL 
     socket = io(socketUrl, {
       autoConnect: false,
       reconnection: true,
