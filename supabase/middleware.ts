@@ -37,9 +37,10 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')
   const isAuthCallback = url.pathname.startsWith('/auth')
   const isHomePage = url.pathname === '/'
+  const isApiRoute = url.pathname.startsWith('/api')
 
   // If user is not authenticated and trying to access a protected route
-  if (!user && !isAuthPage && !isAuthCallback && !isHomePage) {
+  if (!user && !isAuthPage && !isAuthCallback && !isHomePage && !isApiRoute) {
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }

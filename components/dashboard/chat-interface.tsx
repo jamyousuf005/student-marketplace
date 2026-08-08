@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { sendMessage } from '@/actions/messages'
+import { sendMessage, fetchMessages } from '@/actions/messages'
 import { toast } from 'sonner'
 import { Search, Send, Loader2, MessageSquare, Building2, UserCheck, User } from 'lucide-react'
 
@@ -40,6 +40,7 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [messages, setMessages] = useState<MessageItem[]>(userMessages)
 
   const defaultRecipientId = useMemo(() => {
     if (initialRecipientId && connections.some(c => c.id === initialRecipientId)) {
@@ -56,6 +57,30 @@ export function ChatInterface({
     }
   }, [initialRecipientId, connections])
 
+  // Smart polling using Next.js Server Action (polls every 3s only when tab is focused/visible)
+  useEffect(() => {
+    let isMounted = true
+
+    const pollMessages = async () => {
+      if (document.hidden) return // Don't poll when user is on another tab
+      try {
+        const res = await fetchMessages()
+        if (isMounted && res.messages && res.messages.length > 0) {
+          setMessages(res.messages)
+        }
+      } catch (err) {
+        // Silently catch polling errors
+      }
+    }
+
+    const interval = setInterval(pollMessages, 3000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [currentUserId])
+
   const filteredConnections = useMemo(() => {
     if (!searchTerm.trim()) return connections
     const query = searchTerm.toLowerCase().trim()
@@ -68,12 +93,12 @@ export function ChatInterface({
 
   // Filter messages exchanged between current user and active recipient
   const activeConversationMessages = useMemo(() => {
-    if (!selectedRecipientId) return userMessages
-    return userMessages.filter(
+    if (!selectedRecipientId) return messages
+    return messages.filter(
       m => (m.senderId === currentUserId && m.receiverId === selectedRecipientId) ||
            (m.senderId === selectedRecipientId && m.receiverId === currentUserId)
-    )
-  }, [userMessages, currentUserId, selectedRecipientId])
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [messages, currentUserId, selectedRecipientId])
 
   const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -83,23 +108,39 @@ export function ChatInterface({
     }
 
     const form = e.currentTarget
-    const formData = new FormData(form)
-    formData.append('receiverId', selectedRecipientId)
-
-    const content = formData.get('content') as string
+    const content = new FormData(form).get('content') as string
     if (!content || !content.trim()) return
 
+    // Reset the form immediately for UX
+    form.reset()
     setIsLoading(true)
+
+    // Optimistic update — show the message immediately
+    const tempId = crypto.randomUUID()
+    const newMessage: MessageItem = {
+      id: tempId,
+      senderId: currentUserId,
+      receiverId: selectedRecipientId,
+      content,
+      createdAt: new Date().toISOString(),
+    }
+    setMessages(prev => [newMessage, ...prev])
+
+    // Build fresh FormData with the extracted values for the server action
+    const serverFormData = new FormData()
+    serverFormData.append('content', content)
+    serverFormData.append('receiverId', selectedRecipientId)
+
     try {
-      const result = await sendMessage(formData)
+      const result = await sendMessage(serverFormData)
       if (result.error) {
         toast.error(result.error)
-      } else {
-        toast.success('Message sent!')
-        form.reset()
+        // Revert optimistic update on failure
+        setMessages(prev => prev.filter(m => m.id !== tempId))
       }
     } catch (err) {
       toast.error('Failed to send message')
+      setMessages(prev => prev.filter(m => m.id !== tempId))
     } finally {
       setIsLoading(false)
     }
